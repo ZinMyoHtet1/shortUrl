@@ -37,7 +37,7 @@ const createShortUrl = async (req, res, next) => {
       res.send({
         status: SUCCESS,
         message: "Short Url is created successfully",
-        url: `https://shortUrlByJYS/${urlID}`,
+        url: `https://shorturlbyjys.onrender.com/${urlID}`,
       });
     } else {
       res.send({
