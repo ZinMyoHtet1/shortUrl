@@ -3,6 +3,7 @@ import morgan from "morgan";
 import cors from "cors";
 import "dotenv/config";
 
+import adminAccess from "./Middlewares/AdminAccess.js";
 import "./Helpers/init_mongoose.js";
 
 import {
@@ -24,7 +25,7 @@ app.get("/", async (req, res) => {
   res.send("Welcome from Short URL API");
 });
 
-app.get("/shortUrls", getShortUrls);
+app.get("/shortUrls", adminAccess, getShortUrls);
 
 app.post("/create", createShortUrl);
 
