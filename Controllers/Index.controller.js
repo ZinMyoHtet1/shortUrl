@@ -35,7 +35,7 @@ const createShortUrl = async (req, res, next) => {
     const savedShortUrl = await shortUrl.save();
     if (process.env.NODE_ENV === "production") {
       res.send({
-        status: SUCCESS,
+        status: "success",
         message: "Short Url is created successfully",
         url: `https://shorturlbyjys.onrender.com/${urlID}`,
       });
