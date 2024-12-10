@@ -3,7 +3,7 @@ import morgan from "morgan";
 import cors from "cors";
 import "dotenv/config";
 
-import adminAccess from "./Middlewares/AdminAccess.js";
+import adminAccess from "./Middlewares/adminAccess.js";
 import "./Helpers/init_mongoose.js";
 
 import {
