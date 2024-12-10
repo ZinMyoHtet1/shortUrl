@@ -1,6 +1,5 @@
 import JWT from "jsonwebtoken";
 import createError from "http-errors";
-import Url from "../Models/Url.model.js";
 
 export const generateToken = (payload) => {
   return new Promise((resolve, reject) => {

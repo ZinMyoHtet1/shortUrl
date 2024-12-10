@@ -1,13 +1,15 @@
 import express from "express";
-import createError from "http-errors";
 import morgan from "morgan";
 import cors from "cors";
 import "dotenv/config";
 
 import "./Helpers/init_mongoose.js";
-import { randomStr } from "./Helpers/index.js";
-import { generateToken, verifyToken } from "./Helpers/jwt_helper.js";
-import Url from "./Models/Url.model.js";
+
+import {
+  createShortUrl,
+  getRootUrl,
+  getShortUrls,
+} from "./Controllers/Index.controller.js";
 
 const app = express();
 
@@ -22,75 +24,11 @@ app.get("/", async (req, res) => {
   res.send("Welcome from Short URL API");
 });
 
-app.get("/urls", async (req, res) => {
-  try {
-    await Url.find()
-      .then((results) => res.send(results))
-      .catch((error) => {
-        throw createError.InternalServerError(error.message);
-      });
-  } catch (error) {
-    next(error);
-  }
-});
+app.get("/shortUrls", getShortUrls);
 
-app.post("/create", async (req, res, next) => {
-  try {
-    const { url, joiner } = req.body;
-    if (!url && !join_text) {
-      return reject(createError.BadRequest());
-    }
+app.post("/create", createShortUrl);
 
-    const id = randomStr(12);
-    const token = await generateToken(req.body);
-
-    const urlID = `${joiner}.${id}`;
-
-    const shortUrl = new Url({
-      urlID,
-      token,
-    });
-
-    const savedShortUrl = await shortUrl.save();
-    if (process.env.NODE_ENV === "production") {
-      res.send({
-        status: SUCCESS,
-        message: "Short Url is created successfully",
-        url: `http://localhost:${process.env.PORT || 3000}/${urlID}`,
-      });
-    } else {
-      res.send({
-        savedShortUrl,
-        shortUrl: `http://localhost:${process.env.PORT || 3000}/${urlID}`,
-      });
-    }
-  } catch (error) {
-    next(error);
-  }
-});
-
-app.get("/:id", async (req, res, next) => {
-  try {
-    const urlID = req.params.id;
-    if (!urlID) throw createError.BadRequest();
-
-    const url = await Url.findOne({ urlID });
-    if (!url) throw createError.NotFound("this link is not registered");
-
-    const rootUrl = await verifyToken(url?.token);
-
-    if (process.env.NODE_ENV === "production") {
-      res.redirect(rootUrl);
-    } else {
-      res.send({
-        status: "success",
-        rootUrl,
-      });
-    }
-  } catch (error) {
-    next(error);
-  }
-});
+app.get("/:urlID", getRootUrl);
 
 app.use(async (req, res, next) => {
   const error = new Error("Not Found");
