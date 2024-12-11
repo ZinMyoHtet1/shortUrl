@@ -2,6 +2,7 @@ import createError from "http-errors";
 import { randomStr } from "../Helpers/index.js";
 import { generateToken, verifyToken } from "../Helpers/jwt_helper.js";
 import Url from "../Models/Url.model.js";
+import { urlSchemaValidation } from "../Helpers/validations.js";
 
 const getShortUrls = async (req, res, next) => {
   try {
@@ -15,22 +16,40 @@ const getShortUrls = async (req, res, next) => {
   }
 };
 
+const getShortUrlsByUserID = async (req, res, next) => {
+  try {
+    const { userID } = req.params;
+    if (!userID) throw createError.BadRequest();
+    await Url.find({ userID })
+      .then((results) => res.send(results))
+      .catch((error) => {
+        throw createError.InternalServerError(error.message);
+      });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const createShortUrl = async (req, res, next) => {
   try {
-    const { url, joiner } = req.body;
-    if (!url && !joiner) {
-      throw createError.BadRequest();
-      return;
-    }
+    // const { url, joiner, userID } = req.body;
+    const result = await urlSchemaValidation.validateAsync(req.body);
+    // if (!url && !joiner) {
+    //   throw createError.BadRequest();
+    //   return;
+    // }
 
-    const id = randomStr(12);
-    const token = await generateToken(req.body);
+    const id = randomStr(8);
+    const token = await generateToken(result);
 
-    const urlID = `${joiner}${id}`;
+    const urlID = `${result.joiner}${id}`;
+
+    console.log(result.userID);
 
     const shortUrl = new Url({
       urlID,
       token,
+      userID: result.userID,
     });
 
     const savedShortUrl = await shortUrl.save();
@@ -73,4 +92,4 @@ const getRootUrl = async (req, res, next) => {
     next(error);
   }
 };
-export { getShortUrls, createShortUrl, getRootUrl };
+export { getShortUrls, createShortUrl, getRootUrl, getShortUrlsByUserID };

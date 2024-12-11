@@ -4,12 +4,14 @@ import cors from "cors";
 import "dotenv/config";
 
 import adminAccess from "./Middlewares/adminAccess.js";
+import authRoutes from "./Routes/Auth.route.js";
 import "./Helpers/init_mongoose.js";
 
 import {
   createShortUrl,
   getRootUrl,
   getShortUrls,
+  getShortUrlsByUserID,
 } from "./Controllers/Index.controller.js";
 
 const app = express();
@@ -27,7 +29,11 @@ app.get("/", async (req, res) => {
 
 app.get("/shortUrls", adminAccess, getShortUrls);
 
+app.get("/shortUrls/:userID", getShortUrlsByUserID);
+
 app.post("/create", createShortUrl);
+
+app.use("/auth", authRoutes);
 
 app.get("/:urlID", getRootUrl);
 
@@ -38,8 +44,8 @@ app.use(async (req, res, next) => {
 });
 
 app.use((err, req, res, next) => {
+  console.log(err);
   res.status = err.status || 500;
-
   res.send({
     status: err.status || 500,
     message: err.message,

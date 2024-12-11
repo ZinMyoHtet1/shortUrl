@@ -1,0 +1,19 @@
+###
+GET http://localhost:3000/auth
+
+###
+GET http://localhost:3000/auth/temp-token
+
+###
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+
+{
+    "name": "Jan Yeong Sil",
+    "email": "janyeongsil@gmail.com",
+    "password": "12345",
+    "userID":"jljfjsl2lqq23j3lh3h3"
+}
+
+###
+POST http://localhost:3000/auth/login
