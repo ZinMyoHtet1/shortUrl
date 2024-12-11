@@ -18,7 +18,7 @@ const getShortUrls = async (req, res, next) => {
 const createShortUrl = async (req, res, next) => {
   try {
     const { url, joiner } = req.body;
-    if (!url && !join_text) {
+    if (!url && !joiner) {
       return reject(createError.BadRequest());
     }
 
@@ -56,7 +56,7 @@ const getRootUrl = async (req, res, next) => {
     if (!urlID) throw createError.BadRequest();
 
     const url = await Url.findOne({ urlID });
-    if (!url) throw createError.NotFound("this link is not registered");
+    if (!url) throw createError.NotFound();
 
     const rootUrl = await verifyToken(url?.token);
 

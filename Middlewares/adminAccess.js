@@ -2,7 +2,6 @@ const adminAccess = (req, res, next) => {
   const bearerAuthorization = req.headers["authorization"];
 
   const authorization = bearerAuthorization.split(" ")[1];
-  console.log(authorization);
   if (authorization === process.env.ADMIN_ACCESS) {
     req.admin = true;
     next();
