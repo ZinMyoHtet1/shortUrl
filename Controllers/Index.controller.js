@@ -17,9 +17,11 @@ const getShortUrls = async (req, res, next) => {
 
 const createShortUrl = async (req, res, next) => {
   try {
+    console.log(req.body);
     const { url, joiner } = req.body;
     if (!url && !joiner) {
-      return reject(createError.BadRequest());
+      throw createError.BadRequest();
+      return;
     }
 
     const id = randomStr(12);
