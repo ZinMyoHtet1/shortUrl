@@ -17,7 +17,6 @@ const getShortUrls = async (req, res, next) => {
 
 const createShortUrl = async (req, res, next) => {
   try {
-    console.log(req.body);
     const { url, joiner } = req.body;
     if (!url && !joiner) {
       throw createError.BadRequest();
