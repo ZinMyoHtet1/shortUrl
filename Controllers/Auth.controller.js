@@ -8,8 +8,7 @@ import {
 } from "../Helpers/validations.js";
 import Url from "../Models/Url.model.js";
 import User from "../Models/User.model.js";
-import { sendVerificationEmail } from "../Helpers/mail_helper.js";
-import veriStorage from "../Helpers/VeriStorage.js";
+import { verifyEmail } from "../Helpers/index.js";
 
 export default {
   register: async (req, res, next) => {
@@ -25,26 +24,16 @@ export default {
       const newUser = new User(result);
       await newUser.save();
 
-      // const otp = generateOTP();
-      const id = randomStr(8);
-      const token = await generateToken(
-        {
-          email: result.email,
-          name: result.name,
-        },
-        process.env.ACCESS_TOKEN_SECRET
-      );
-      // tempStorage.set(result.email, otp);
-
-      veriStorage.set(id, token);
-
-      const verificationURL =
-        process.env.NODE_ENV === "production"
-          ? `https://shorturlbyjys.onrender.com/auth/verify/${id}`
-          : `http://localhost:${process.env.PORT}/auth/verify/${id}`;
-
-      await sendVerificationEmail(result.email, verificationURL)
-        .then((info) => res.send("EMail Sent: Verify and Check your Email"))
+      //For Verification Email
+      await verifyEmail(result.email, result.name)
+        .then((info) => {
+          console.log(info, "info");
+          res.send({
+            status: "success",
+            payload: info,
+            message: "EMail Sent: Verify and Check your Email",
+          });
+        })
         .catch((error) => {
           throw createError.InternalServerError(error.message);
         });
@@ -57,8 +46,45 @@ export default {
     try {
       const result = await userLoginValidation.validateAsync(req.body);
 
-      res.send(result);
-      res.send("Login Route");
+      const user = await User.findOne({ email: result.email });
+      if (!user)
+        throw createError.Conflict(`${result.email} is not registerd. `);
+
+      const isMatch = await user.isValidatePassword(result.password);
+      if (!isMatch) throw createError.Unauthorized();
+
+      if (!user.isVerified) {
+        //For Verification Email
+        await verifyEmail(result.email, result.name)
+          .then((info) => {
+            console.log(info, "info");
+            res.send({
+              status: "success",
+              payload: info,
+              message: "EMail Sent: Verify and Check your Email",
+            });
+          })
+          .catch((error) => {
+            throw createError.InternalServerError(error.message);
+          });
+      } else {
+        const accessToken = await generateToken(
+          updatedUser,
+          process.env.ACCESS_TOKEN_SECRET,
+          "1h"
+        );
+        const refreshToken = await generateToken(
+          updatedUser,
+          process.env.REFRESH_TOKEN_SECRET,
+          "1y"
+        );
+
+        res.send({
+          status: "success",
+          message: "Successful Login",
+          payload: { accessToken, refreshToken },
+        });
+      }
     } catch (error) {
       next(error);
     }
@@ -94,18 +120,33 @@ export default {
 
       const token = veriStorage.get(verifyID);
 
-      await verifyToken(token, process.env.ACCESS_TOKEN_SECRET)
+      await verifyToken(token, process.env.VERIFY_TOKEN_SECRET)
         .then(async (result) => {
           const updatedUser = await User.findOneAndUpdate(
             { email: result.email },
             { $set: { isVerified: true } },
             { new: true }
           );
+
+          // console.log(updatedUser, "updatedUser payload");
           if (updatedUser) {
+            const { name, email, userID } = updatedUser;
+
+            const accessToken = await generateToken(
+              { name, email, userID },
+              process.env.ACCESS_TOKEN_SECRET,
+              "1h"
+            );
+            const refreshToken = await generateToken(
+              { name, email, userID },
+              process.env.REFRESH_TOKEN_SECRET,
+              "1y"
+            );
+
             res.status(200).send({
               status: "success",
               message: "Successful Verification Email",
-              paylaod: updatedUser,
+              paylaod: { accessToken, refreshToken },
             });
           } else {
             res.status(401).send({

@@ -1,13 +1,14 @@
 import JWT from "jsonwebtoken";
 import createError from "http-errors";
 
-export const generateToken = (payload, secret) => {
+export const generateToken = (payload, secret, expiresIn = 0) => {
   return new Promise((resolve, reject) => {
     JWT.sign(
       payload,
       secret,
       {
         algorithm: "HS256",
+        expiresIn,
       },
       (err, token) => {
         if (err) {
