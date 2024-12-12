@@ -40,7 +40,7 @@ const createShortUrl = async (req, res, next) => {
     // }
 
     const id = randomStr(8);
-    const token = await generateToken(result);
+    const token = await generateToken(result, process.env.URL_TOKEN_SECRET);
 
     const urlID = `${result.joiner}${id}`;
 
@@ -78,14 +78,14 @@ const getRootUrl = async (req, res, next) => {
     const url = await Url.findOne({ urlID });
     if (!url) throw createError.NotFound();
 
-    const rootUrl = await verifyToken(url?.token);
+    const payload = await verifyToken(url?.token, process.env.URL_TOKEN_SECRET);
 
     if (process.env.NODE_ENV === "production") {
-      res.redirect(rootUrl);
+      res.redirect(payload.url);
     } else {
       res.send({
         status: "success",
-        rootUrl,
+        rootUrl: payload.url,
       });
     }
   } catch (error) {

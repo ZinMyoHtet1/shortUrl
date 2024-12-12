@@ -87,8 +87,8 @@ class Mailer {
   }
 
   replaceHTML_Text(from, to) {
-    const html = this.mailOptions.html;
-    html.replace(from, to);
+    const prevHtml = this.mailOptions.html;
+    const html = prevHtml.replaceAll(from, to);
     this.mailOptions.html = html;
     return this;
   }
