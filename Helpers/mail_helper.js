@@ -7,7 +7,6 @@ const sendEmail = async (receiver, subject, text) => {
 
 const sendVerificationEmail = async (receiver, veriLink) => {
   const html = readFileSync("../Htmls/verificationEmail.html");
-  console.log(veriLink);
   return (
     mailer
       .setReceiver(receiver)
@@ -28,7 +27,7 @@ const sendOTP = async (receiver, otp) => {
       .setSubject("Forget Password | OTP Code")
       // .setText("OTP code for new password - " + otp)
       .setHTML(html)
-      .replaceHTML_Text("{{OTP-CODE}}", otp)
+      .replaceHTML_Text("[OTP-CODE]", otp)
       .send()
   );
 };

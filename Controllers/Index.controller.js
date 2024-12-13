@@ -44,8 +44,6 @@ const createShortUrl = async (req, res, next) => {
 
     const urlID = `${result.joiner}${id}`;
 
-    console.log(result.userID);
-
     const shortUrl = new Url({
       urlID,
       token,

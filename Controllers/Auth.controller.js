@@ -1,14 +1,55 @@
 import createError from "http-errors";
 
-import { randomStr } from "../Helpers/index.js";
-import { generateToken, verifyToken } from "../Helpers/jwt_helper.js";
+import {
+  isValidOTP,
+  randomStr,
+  sendOtpToEmail,
+  verifyEmailAndUpdateUser,
+} from "../Helpers/index.js";
 import {
   userRegisterValidation,
   userLoginValidation,
 } from "../Helpers/validations.js";
 import Url from "../Models/Url.model.js";
 import User from "../Models/User.model.js";
-import { verifyEmail } from "../Helpers/index.js";
+import { verificationEmail } from "../Helpers/index.js";
+import { validEmail } from "../Helpers/validations.js";
+import { hashPassword } from "../Helpers/bcrypt_helper.js";
+import { generateToken } from "../Helpers/jwt_helper.js";
+
+const userVerifiedOrLogin = (user) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!user.isVerified) {
+        //For Verification Email
+        const info = await verificationEmail(user.email, user.name);
+        resolve(info);
+      } else {
+        const accessToken = await generateToken(
+          {
+            name: user.name,
+            email: user.email,
+            userID: user.userID,
+          },
+          process.env.ACCESS_TOKEN_SECRET,
+          "1h"
+        );
+        const refreshToken = await generateToken(
+          {
+            name: user.name,
+            email: user.email,
+            userID: user.userID,
+          },
+          process.env.REFRESH_TOKEN_SECRET,
+          "1y"
+        );
+        resolve({ accessToken, refreshToken });
+      }
+    } catch (error) {
+      reject(createError.InternalServerError(error.message));
+    }
+  });
+};
 
 export default {
   register: async (req, res, next) => {
@@ -25,9 +66,8 @@ export default {
       await newUser.save();
 
       //For Verification Email
-      await verifyEmail(result.email, result.name)
+      await verificationEmail(result.email, result.name)
         .then((info) => {
-          console.log(info, "info");
           res.send({
             status: "success",
             payload: info,
@@ -54,35 +94,20 @@ export default {
       if (!isMatch) throw createError.Unauthorized();
 
       if (!user.isVerified) {
-        //For Verification Email
-        await verifyEmail(result.email, result.name)
-          .then((info) => {
-            console.log(info, "info");
-            res.send({
-              status: "success",
-              payload: info,
-              message: "EMail Sent: Verify and Check your Email",
-            });
-          })
-          .catch((error) => {
-            throw createError.InternalServerError(error.message);
-          });
+        const info = await userVerifiedOrLogin(user);
+
+        res.send({
+          status: "success",
+          payload: info,
+          message: "EMail Sent: Verify and Check your Email",
+        });
       } else {
-        const accessToken = await generateToken(
-          updatedUser,
-          process.env.ACCESS_TOKEN_SECRET,
-          "1h"
-        );
-        const refreshToken = await generateToken(
-          updatedUser,
-          process.env.REFRESH_TOKEN_SECRET,
-          "1y"
-        );
+        const tokens = await userVerifiedOrLogin(user);
 
         res.send({
           status: "success",
           message: "Successful Login",
-          payload: { accessToken, refreshToken },
+          payload: tokens,
         });
       }
     } catch (error) {
@@ -113,51 +138,97 @@ export default {
     }
   },
 
-  verify: async (req, res, next) => {
+  verifyEmail: async (req, res, next) => {
     try {
       const { verifyID } = req.params;
       if (!verifyID) throw createError.BadRequest();
 
-      const token = veriStorage.get(verifyID);
+      const updatedUser = await verifyEmailAndUpdateUser(verifyID);
+      if (updatedUser) {
+        const { name, email, userID } = updatedUser;
 
-      await verifyToken(token, process.env.VERIFY_TOKEN_SECRET)
-        .then(async (result) => {
-          const updatedUser = await User.findOneAndUpdate(
-            { email: result.email },
-            { $set: { isVerified: true } },
-            { new: true }
-          );
+        const accessToken = await generateToken(
+          { name, email, userID },
+          process.env.ACCESS_TOKEN_SECRET,
+          "1h"
+        );
+        const refreshToken = await generateToken(
+          { name, email, userID },
+          process.env.REFRESH_TOKEN_SECRET,
+          "1y"
+        );
 
-          // console.log(updatedUser, "updatedUser payload");
-          if (updatedUser) {
-            const { name, email, userID } = updatedUser;
+        res.status(200).send({
+          status: "success",
+          message: "Successful Verification Email",
+          payload: { accessToken, refreshToken },
+        });
+      } else {
+        res.status(401).send({
+          status: "fail",
+          message: "Verification Failed!",
+        });
+      }
+    } catch (error) {
+      next(error);
+    }
+  },
 
-            const accessToken = await generateToken(
-              { name, email, userID },
-              process.env.ACCESS_TOKEN_SECRET,
-              "1h"
-            );
-            const refreshToken = await generateToken(
-              { name, email, userID },
-              process.env.REFRESH_TOKEN_SECRET,
-              "1y"
-            );
+  forgetPassword: async (req, res, next) => {
+    try {
+      const email = await validEmail.validateAsync(req.body?.email);
 
-            res.status(200).send({
-              status: "success",
-              message: "Successful Verification Email",
-              paylaod: { accessToken, refreshToken },
-            });
-          } else {
-            res.status(401).send({
-              status: "fail",
-              message: "Verification Failed!",
-            });
-          }
-        })
+      const doesExist = await User.findOne({ email });
+      if (!doesExist) throw createError.NotFound(`${email} is not registered.`);
+
+      await sendOtpToEmail(email)
+        .then((info) => res.send("OTP Sent : " + info.response))
         .catch((error) => {
           throw createError.InternalServerError(error.message);
         });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  verifyOTP: async (req, res, next) => {
+    try {
+      const { email, otp, newPassword } = req.body;
+      if (!otp && !email && !newPassword) throw createError.BadRequest();
+      const result = await userLoginValidation.validateAsync({
+        email,
+        password: newPassword,
+      });
+      const user = await User.findOne({ email: result.email });
+      if (!user)
+        throw createError.NotFound(`${result.email} is not registered`);
+
+      const isMatch = await isValidOTP(result.email, otp);
+      if (!isMatch) throw createError.Unauthorized("Incorrect OTP");
+
+      const hashedPassword = await hashPassword(newPassword);
+
+      const updatedUser = await User.findOneAndUpdate(
+        { email: result.email },
+        { $set: { password: hashedPassword } }
+      );
+
+      if (!updatedUser.isVerified) {
+        const info = await userVerifiedOrLogin(updatedUser);
+
+        res.send({
+          status: "success",
+          payload: info,
+          message: "EMail Sent: Verify and Check your Email",
+        });
+      } else {
+        const tokens = await userVerifiedOrLogin(updatedUser);
+        res.send({
+          status: "success",
+          message: "Successful Login",
+          payload: tokens,
+        });
+      }
     } catch (error) {
       next(error);
     }
