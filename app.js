@@ -12,6 +12,7 @@ import {
   getRootUrl,
   getShortUrls,
   getShortUrlsByUserID,
+  getTempToken,
 } from "./Controllers/Index.controller.js";
 
 const app = express();
@@ -33,9 +34,11 @@ app.get("/shortUrls/:userID", getShortUrlsByUserID);
 
 app.post("/create", createShortUrl);
 
-app.use("/auth", authRoutes);
+app.get("/temp-token", getTempToken);
 
 app.get("/:urlID", getRootUrl);
+
+app.use("/auth", authRoutes);
 
 app.use(async (req, res, next) => {
   const error = new Error("Not Found");
@@ -55,3 +58,7 @@ app.use((err, req, res, next) => {
 app.listen(port, () => {
   console.log("your server is running");
 });
+
+console.log(JSON.stringify({ name: "jYS", age: 33 }));
+const stringObject = JSON.stringify({ name: "jYS", age: 33 });
+console.log(JSON.parse(stringObject));

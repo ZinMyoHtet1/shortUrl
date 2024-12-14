@@ -123,21 +123,6 @@ export default {
     }
   },
 
-  getTempToken: async (req, res, next) => {
-    try {
-      let doesExist = true;
-      let tempToken;
-      while (doesExist) {
-        tempToken = randomStr(24);
-        doesExist = await Url.findOne({ tempToken });
-      }
-
-      res.send({ tempToken });
-    } catch (error) {
-      next(error);
-    }
-  },
-
   verifyEmail: async (req, res, next) => {
     try {
       const { verifyID } = req.params;

@@ -50,19 +50,13 @@ const createShortUrl = async (req, res, next) => {
       userID: result.userID,
     });
 
-    const savedShortUrl = await shortUrl.save();
-    if (process.env.NODE_ENV === "production") {
-      res.send({
-        status: "success",
-        message: "Short Url is created successfully",
-        url: `https://shorturlbyjys.onrender.com/${urlID}`,
-      });
-    } else {
-      res.send({
-        savedShortUrl,
-        shortUrl: `http://localhost:${process.env.PORT || 3000}/${urlID}`,
-      });
-    }
+    await shortUrl.save();
+
+    res.send({
+      status: "success",
+      message: "Short Url is created successfully",
+      url: `https://shorturlbyjys.onrender.com/${urlID}`,
+    });
   } catch (error) {
     next(error);
   }
@@ -90,4 +84,30 @@ const getRootUrl = async (req, res, next) => {
     next(error);
   }
 };
-export { getShortUrls, createShortUrl, getRootUrl, getShortUrlsByUserID };
+
+const getTempToken = async (req, res, next) => {
+  try {
+    let doesExist = true;
+    let tempToken;
+    while (doesExist) {
+      tempToken = randomStr(24);
+      doesExist = await Url.findOne({ tempToken });
+    }
+
+    res.send({
+      status: "success",
+      message: "temporary token is created",
+      tempToken,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export {
+  getShortUrls,
+  createShortUrl,
+  getRootUrl,
+  getShortUrlsByUserID,
+  getTempToken,
+};
