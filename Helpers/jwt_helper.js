@@ -1,18 +1,17 @@
 import JWT from "jsonwebtoken";
-import createError from "http-errors";
 
-export const generateToken = (payload, secret, expiresIn = 0) => {
+export const generateToken = (payload, secret, duration = "9999999999y") => {
   return new Promise((resolve, reject) => {
     JWT.sign(
       payload,
       secret,
       {
         algorithm: "HS256",
-        expiresIn,
+        expiresIn: duration,
       },
       (err, token) => {
         if (err) {
-          reject(createError.InternalServerError(err.message));
+          reject(err);
           return;
         }
         resolve(token);
@@ -25,7 +24,7 @@ export const verifyToken = (token, secret) => {
   return new Promise((resolve, reject) => {
     JWT.verify(token, secret, (error, decoded) => {
       if (error) {
-        reject(createError.InternalServerError(error.message));
+        reject(error);
         return;
       }
       resolve(decoded);

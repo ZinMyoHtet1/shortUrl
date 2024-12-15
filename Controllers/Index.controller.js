@@ -20,11 +20,25 @@ const getShortUrlsByUserID = async (req, res, next) => {
   try {
     const { userID } = req.params;
     if (!userID) throw createError.BadRequest();
-    await Url.find({ userID })
-      .then((results) => res.send(results))
-      .catch((error) => {
-        throw createError.InternalServerError(error.message);
+    const results = await Url.find({ userID }).sort({ createdAt: -1 });
+    // const shortUrls = results.map(async (url) => {
+    let shortUrls = [];
+    for (const url of results) {
+      const payload = await verifyToken(
+        url?.token,
+        process.env.URL_TOKEN_SECRET
+      );
+      shortUrls.push({
+        rootUrl: payload.url,
+        shortUrl: `https://shorturlbyjys.onrender.com/${url.urlID}`,
       });
+    }
+
+    res.send({
+      status: "success",
+      data: shortUrls,
+      message: "FEtching shorturls success",
+    });
   } catch (error) {
     next(error);
   }
@@ -32,12 +46,7 @@ const getShortUrlsByUserID = async (req, res, next) => {
 
 const createShortUrl = async (req, res, next) => {
   try {
-    // const { url, joiner, userID } = req.body;
     const result = await urlSchemaValidation.validateAsync(req.body);
-    // if (!url && !joiner) {
-    //   throw createError.BadRequest();
-    //   return;
-    // }
 
     const id = randomStr(8);
     const token = await generateToken(result, process.env.URL_TOKEN_SECRET);

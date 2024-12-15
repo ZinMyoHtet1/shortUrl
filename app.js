@@ -58,7 +58,3 @@ app.use((err, req, res, next) => {
 app.listen(port, () => {
   console.log("your server is running");
 });
-
-console.log(JSON.stringify({ name: "jYS", age: 33 }));
-const stringObject = JSON.stringify({ name: "jYS", age: 33 });
-console.log(JSON.parse(stringObject));
