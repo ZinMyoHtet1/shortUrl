@@ -3,6 +3,7 @@ import { randomStr } from "../Helpers/index.js";
 import { generateToken, verifyToken } from "../Helpers/jwt_helper.js";
 import Url from "../Models/Url.model.js";
 import { urlSchemaValidation } from "../Helpers/validations.js";
+import genTempToken from "../Helpers/genTempToken.js";
 
 const getShortUrls = async (req, res, next) => {
   try {
@@ -19,6 +20,7 @@ const getShortUrls = async (req, res, next) => {
 const getShortUrlsByUserID = async (req, res, next) => {
   try {
     const { userID } = req.params;
+    console.log("shorturls by userId");
     if (!userID) throw createError.BadRequest();
     await Url.find({ userID })
       .then((results) => res.send(results))
@@ -64,6 +66,7 @@ const createShortUrl = async (req, res, next) => {
 
 const getRootUrl = async (req, res, next) => {
   try {
+    console.log("get root ulr");
     const urlID = req.params.urlID;
     if (!urlID) throw createError.BadRequest();
 
@@ -86,14 +89,15 @@ const getRootUrl = async (req, res, next) => {
 };
 
 const getTempToken = async (req, res, next) => {
+  console.log("get temp token");
   try {
-    let doesExist = true;
-    let tempToken;
-    while (doesExist) {
-      tempToken = randomStr(24);
-      doesExist = await Url.findOne({ tempToken });
-    }
-
+    // let doesExist = true;
+    // let tempToken;
+    // while (doesExist) {
+    //   tempToken = randomStr(24);
+    //   doesExist = await Url.findOne({ tempToken });
+    // }
+    const tempToken = await genTempToken();
     res.send({
       status: "success",
       message: "temporary token is created",

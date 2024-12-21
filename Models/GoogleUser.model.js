@@ -20,40 +20,13 @@ const userSchema = new Schema(
       unique: true,
       required: true,
     },
-    password: {
-      type: String,
-      required: true,
-    },
     picture: {
       type: String,
       default:
         "https://plus.unsplash.com/premium_photo-1732757787588-29df717691f4?q=80&w=1508&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     },
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
   },
   { timestamps: true }
 );
 
-userSchema.pre("save", async function (next) {
-  try {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(this.password, salt);
-    this.password = hashedPassword;
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
-
-userSchema.methods.isValidatePassword = async function (password) {
-  try {
-    return await bcrypt.compare(password, this.password);
-  } catch (error) {
-    return error;
-  }
-};
-
-export default new mongoose.model("User", userSchema);
+export default new mongoose.model("GoogleUser", userSchema);

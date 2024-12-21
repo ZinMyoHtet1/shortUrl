@@ -15,6 +15,8 @@ import {
   getTempToken,
 } from "./Controllers/Index.controller.js";
 
+import authController from "./Controllers/Auth.controller.js";
+
 const app = express();
 
 const port = process.env.PORT || 3000;
@@ -36,9 +38,9 @@ app.post("/create", createShortUrl);
 
 app.get("/temp-token", getTempToken);
 
-app.get("/:urlID", getRootUrl);
-
 app.use("/auth", authRoutes);
+
+app.get("/:urlID", getRootUrl);
 
 app.use(async (req, res, next) => {
   const error = new Error("Not Found");
@@ -58,7 +60,3 @@ app.use((err, req, res, next) => {
 app.listen(port, () => {
   console.log("your server is running");
 });
-
-console.log(JSON.stringify({ name: "jYS", age: 33 }));
-const stringObject = JSON.stringify({ name: "jYS", age: 33 });
-console.log(JSON.parse(stringObject));

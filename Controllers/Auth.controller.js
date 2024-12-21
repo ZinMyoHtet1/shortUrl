@@ -10,12 +10,14 @@ import {
   userRegisterValidation,
   userLoginValidation,
 } from "../Helpers/validations.js";
-import Url from "../Models/Url.model.js";
+// import Url from "../Models/Url.model.js";
 import User from "../Models/User.model.js";
+import GoogleUser from "../Models/GoogleUser.model.js";
 import { verificationEmail } from "../Helpers/index.js";
 import { validEmail } from "../Helpers/validations.js";
 import { hashPassword } from "../Helpers/bcrypt_helper.js";
 import { generateToken } from "../Helpers/jwt_helper.js";
+import genTempToken from "../Helpers/genTempToken.js";
 
 const userVerifiedOrLogin = (user) => {
   return new Promise(async (resolve, reject) => {
@@ -104,12 +106,89 @@ export default {
       } else {
         const tokens = await userVerifiedOrLogin(user);
 
+        const profile = {
+          name: user.name,
+          email: user.email,
+          picture: user.picture,
+        };
+
         res.send({
           status: "success",
           message: "Successful Login",
-          payload: tokens,
+          payload: { ...tokens, profile, userID: user.userID },
         });
       }
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  googleLogin: async (req, res, next) => {
+    try {
+      const { access_token, userID } = req.query;
+      if (!access_token && !userID) throw createError.BadRequest();
+
+      const response = await fetch(
+        `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${access_token}`
+      );
+      if (!response.ok) throw createError.Unauthorized();
+      const googleData = await response.json();
+
+      const { email, name, picture } = googleData;
+
+      const user = await GoogleUser.findOne({ email });
+      const userByUserID = await GoogleUser.findOne({ userID });
+
+      if (!user) {
+        //register
+        console.log("running ");
+        const newUser = new GoogleUser({
+          name,
+          email,
+          picture,
+          userID,
+        });
+        await newUser.save();
+      }
+
+      const profile = { email, name, picture };
+      const accessToken = await generateToken(
+        {
+          name,
+          email,
+          userID: user
+            ? user.userID
+            : userByUserID
+            ? await genTempToken()
+            : userID,
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        "1h"
+      );
+      const refreshToken = await generateToken(
+        {
+          name,
+          email,
+          userID: user
+            ? user.userID
+            : userByUserID
+            ? await genTempToken()
+            : userID,
+        },
+        process.env.REFRESH_TOKEN_SECRET,
+        "1y"
+      );
+
+      res.send({
+        status: "success",
+        message: "Successful Login",
+        payload: {
+          profile,
+          accessToken,
+          refreshToken,
+          userID: user ? user.userID : userID,
+        },
+      });
     } catch (error) {
       next(error);
     }
